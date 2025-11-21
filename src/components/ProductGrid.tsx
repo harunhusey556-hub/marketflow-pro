@@ -1,27 +1,53 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import ProductCard from "./ProductCard";
 import Categories from "./Categories";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
-const products = [
-  { id: "1", name: "Fresh Apples", price: 3.99, category: "Fruits", image: "https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "2", name: "Organic Bananas", price: 2.49, category: "Fruits", image: "https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "3", name: "Tomatoes", price: 4.29, category: "Vegetables", image: "https://images.unsplash.com/photo-1546470427-e26264b0ed55?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "4", name: "Fresh Carrots", price: 2.99, category: "Vegetables", image: "https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "5", name: "Premium Beef", price: 12.99, category: "Meat", image: "https://images.unsplash.com/photo-1588347818036-be5e2bbf85c5?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "6", name: "Chicken Breast", price: 8.99, category: "Meat", image: "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "7", name: "Fresh Milk", price: 4.49, category: "Dairy", image: "https://images.unsplash.com/photo-1550583724-b2692b85b150?w=500&h=500&fit=crop", unit: "gal" },
-  { id: "8", name: "Greek Yogurt", price: 5.99, category: "Dairy", image: "https://images.unsplash.com/photo-1625845478827-4e8a48e57090?w=500&h=500&fit=crop", unit: "pack" },
-  { id: "9", name: "Orange Juice", price: 6.49, category: "Beverages", image: "https://images.unsplash.com/photo-1600271886742-f049cd451bba?w=500&h=500&fit=crop", unit: "bottle" },
-  { id: "10", name: "Coffee Beans", price: 14.99, category: "Beverages", image: "https://images.unsplash.com/photo-1559056199-641a0ac8b55e?w=500&h=500&fit=crop", unit: "lb" },
-  { id: "11", name: "Sourdough Bread", price: 5.49, category: "Bakery", image: "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=500&h=500&fit=crop", unit: "loaf" },
-  { id: "12", name: "Croissants", price: 7.99, category: "Bakery", image: "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=500&h=500&fit=crop", unit: "pack" },
-];
+interface Product {
+  id: string;
+  name: string;
+  price: number;
+  category: string;
+  image_url: string;
+  unit: string;
+}
 
 const ProductGrid = () => {
+  const [products, setProducts] = useState<Product[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    fetchProducts();
+
+    const channel = supabase
+      .channel('products-changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
+        fetchProducts();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchProducts = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("id, name, category, price, unit, image_url")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) {
+      console.error("Error fetching products:", error);
+      return;
+    }
+
+    setProducts(data || []);
+  };
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -61,7 +87,15 @@ const ProductGrid = () => {
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
           {filteredProducts.map((product) => (
-            <ProductCard key={product.id} {...product} />
+            <ProductCard 
+              key={product.id} 
+              id={product.id}
+              name={product.name}
+              price={product.price}
+              category={product.category}
+              image={product.image_url}
+              unit={product.unit}
+            />
           ))}
         </div>
 

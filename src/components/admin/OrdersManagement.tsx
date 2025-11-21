@@ -211,6 +211,7 @@ const OrdersManagement = () => {
           <DialogHeader>
             <DialogTitle>Order Details: {selectedOrder?.order_number}</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">View complete order information and items</p>
           <div className="space-y-4">
             <div>
               <h4 className="font-semibold mb-2">Items</h4>

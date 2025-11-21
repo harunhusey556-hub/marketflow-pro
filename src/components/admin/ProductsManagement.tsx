@@ -10,6 +10,31 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Edit, Trash2, Package } from "lucide-react";
+import { z } from "zod";
+
+// Product validation schema matching database constraints
+const productSchema = z.object({
+  name: z.string()
+    .trim()
+    .min(1, "Product name is required")
+    .max(200, "Product name must be less than 200 characters"),
+  category: z.string().min(1, "Category is required"),
+  price: z.number()
+    .min(0, "Price must be positive")
+    .max(999999, "Price cannot exceed $999,999"),
+  unit: z.string().min(1, "Unit is required"),
+  image_url: z.string()
+    .url("Must be a valid URL")
+    .min(1, "Image URL is required"),
+  description: z.string()
+    .max(2000, "Description must be less than 2000 characters")
+    .nullable(),
+  stock_quantity: z.number()
+    .int("Stock must be a whole number")
+    .min(0, "Stock cannot be negative")
+    .max(1000000, "Stock cannot exceed 1,000,000"),
+  is_active: z.boolean(),
+});
 
 interface Product {
   id: string;
@@ -109,10 +134,24 @@ const ProductsManagement = () => {
       price: parseFloat(formData.price),
       unit: formData.unit,
       image_url: formData.image_url,
-      description: formData.description,
+      description: formData.description || null,
       stock_quantity: parseInt(formData.stock_quantity),
       is_active: formData.is_active,
     };
+
+    // Validate input data
+    try {
+      productSchema.parse(productData);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        toast({
+          title: "Validation Error",
+          description: error.errors[0].message,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     if (editingProduct) {
       const { error } = await supabase
@@ -123,7 +162,7 @@ const ProductsManagement = () => {
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to update product",
+          description: error.message || "Failed to update product",
           variant: "destructive",
         });
         return;
@@ -141,7 +180,7 @@ const ProductsManagement = () => {
       if (error) {
         toast({
           title: "Error",
-          description: "Failed to create product",
+          description: error.message || "Failed to create product",
           variant: "destructive",
         });
         return;
@@ -301,10 +340,12 @@ const ProductsManagement = () => {
                 <Label htmlFor="name">Product Name *</Label>
                 <Input
                   id="name"
+                  maxLength={200}
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   required
                 />
+                <p className="text-xs text-muted-foreground">{formData.name.length}/200 characters</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">Category *</Label>
@@ -333,10 +374,12 @@ const ProductsManagement = () => {
                   type="number"
                   step="0.01"
                   min="0"
+                  max="999999"
                   value={formData.price}
                   onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                   required
                 />
+                <p className="text-xs text-muted-foreground">Max: $999,999</p>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="unit">Unit *</Label>
@@ -353,10 +396,12 @@ const ProductsManagement = () => {
                   id="stock"
                   type="number"
                   min="0"
+                  max="1000000"
                   value={formData.stock_quantity}
                   onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
                   required
                 />
+                <p className="text-xs text-muted-foreground">Max: 1,000,000</p>
               </div>
             </div>
             <div className="space-y-2">
@@ -373,10 +418,12 @@ const ProductsManagement = () => {
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
+                maxLength={2000}
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 rows={3}
               />
+              <p className="text-xs text-muted-foreground">{formData.description.length}/2000 characters</p>
             </div>
             <div className="flex items-center gap-2">
               <input

@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu, LogOut, Shield } from "lucide-react";
+import { ShoppingCart, Menu, LogOut, Shield, User, Heart } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Cart from "./Cart";
@@ -77,7 +77,7 @@ const Navigation = () => {
         <div className="flex items-center gap-4">
           {session ? (
             <>
-              {isAdmin && (
+              {isAdmin ? (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -86,6 +86,16 @@ const Navigation = () => {
                 >
                   <Shield className="h-4 w-4" />
                   Admin
+                </Button>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/profile")}
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <User className="h-4 w-4" />
+                  Hesabım
                 </Button>
               )}
               <Button variant="ghost" size="sm" onClick={handleSignOut} className="hidden md:flex">
@@ -137,7 +147,7 @@ const Navigation = () => {
                 </a>
                 {session ? (
                   <>
-                    {isAdmin && (
+                    {isAdmin ? (
                       <Button
                         variant="ghost"
                         onClick={() => navigate("/admin")}
@@ -146,7 +156,24 @@ const Navigation = () => {
                         <Shield className="mr-2 h-4 w-4" />
                         Admin Panel
                       </Button>
+                    ) : (
+                      <Button
+                        variant="ghost"
+                        onClick={() => navigate("/profile")}
+                        className="justify-start"
+                      >
+                        <User className="mr-2 h-4 w-4" />
+                        Hesabım
+                      </Button>
                     )}
+                    <Button
+                      variant="ghost"
+                      onClick={() => navigate("/wishlist")}
+                      className="justify-start"
+                    >
+                      <Heart className="mr-2 h-4 w-4" />
+                      Favorilerim
+                    </Button>
                     <Button variant="ghost" onClick={handleSignOut} className="justify-start">
                       <LogOut className="mr-2 h-4 w-4" />
                       Sign Out

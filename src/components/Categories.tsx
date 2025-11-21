@@ -8,12 +8,8 @@ interface CategoriesProps {
 
 const categories = [
   { name: "All", icon: null },
-  { name: "Fruits", icon: Apple },
-  { name: "Vegetables", icon: Carrot },
+  { name: "Poultry", icon: Beef },
   { name: "Meat", icon: Beef },
-  { name: "Dairy", icon: Milk },
-  { name: "Beverages", icon: Coffee },
-  { name: "Bakery", icon: Cookie },
 ];
 
 const Categories = ({ selectedCategory, onSelectCategory }: CategoriesProps) => {

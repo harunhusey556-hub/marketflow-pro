@@ -3,9 +3,12 @@ import { useCart } from "@/contexts/CartContext";
 import { Minus, Plus, Trash2, ShoppingBag } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { useState } from "react";
+import CheckoutDialog from "./CheckoutDialog";
 
 const Cart = () => {
   const { cart, removeFromCart, updateQuantity, clearCart, getTotalPrice } = useCart();
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   if (cart.length === 0) {
     return (
@@ -99,7 +102,7 @@ const Cart = () => {
           </div>
         </div>
         <div className="space-y-2">
-          <Button className="w-full" size="lg">
+          <Button className="w-full" size="lg" onClick={() => setIsCheckoutOpen(true)}>
             Proceed to Checkout
           </Button>
           <Button
@@ -111,6 +114,8 @@ const Cart = () => {
           </Button>
         </div>
       </div>
+      
+      <CheckoutDialog open={isCheckoutOpen} onOpenChange={setIsCheckoutOpen} />
     </div>
   );
 };

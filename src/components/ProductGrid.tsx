@@ -55,7 +55,7 @@ const ProductGrid = () => {
       const matchesSearch = product.name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [selectedCategory, searchQuery]);
+  }, [products, selectedCategory, searchQuery]);
 
   return (
     <section id="products" className="py-16 bg-muted/30">

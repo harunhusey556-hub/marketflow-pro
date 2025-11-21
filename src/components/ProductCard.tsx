@@ -21,7 +21,7 @@ const ProductCard = ({ id, name, price, image, category, unit = "unit" }: Produc
   };
 
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg">
       <div className="relative overflow-hidden aspect-square">
         <img
           src={image}

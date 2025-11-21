@@ -29,18 +29,23 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
     setCart((prev) => {
       const existingItem = prev.find((i) => i.id === item.id);
       if (existingItem) {
-        toast({
-          title: "Updated Cart",
-          description: `${item.name} quantity increased`,
-        });
+        // Use setTimeout to avoid setState during render
+        setTimeout(() => {
+          toast({
+            title: "Updated Cart",
+            description: `${item.name} quantity increased`,
+          });
+        }, 0);
         return prev.map((i) =>
           i.id === item.id ? { ...i, quantity: i.quantity + 1 } : i
         );
       }
-      toast({
-        title: "Added to Cart",
-        description: `${item.name} added to your cart`,
-      });
+      setTimeout(() => {
+        toast({
+          title: "Added to Cart",
+          description: `${item.name} added to your cart`,
+        });
+      }, 0);
       return [...prev, { ...item, quantity: 1 }];
     });
   };
@@ -48,10 +53,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
   const removeFromCart = (id: string) => {
     const item = cart.find((i) => i.id === id);
     if (item) {
-      toast({
-        title: "Removed from Cart",
-        description: `${item.name} removed from your cart`,
-      });
+      setTimeout(() => {
+        toast({
+          title: "Removed from Cart",
+          description: `${item.name} removed from your cart`,
+        });
+      }, 0);
     }
     setCart((prev) => prev.filter((item) => item.id !== id));
   };
@@ -68,10 +75,12 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCart = () => {
     setCart([]);
-    toast({
-      title: "Cart Cleared",
-      description: "All items removed from cart",
-    });
+    setTimeout(() => {
+      toast({
+        title: "Cart Cleared",
+        description: "All items removed from cart",
+      });
+    }, 0);
   };
 
   const getTotalItems = () => {

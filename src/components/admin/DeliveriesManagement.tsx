@@ -223,6 +223,7 @@ const DeliveriesManagement = () => {
           <DialogHeader>
             <DialogTitle>Update Delivery Information</DialogTitle>
           </DialogHeader>
+          <p className="text-sm text-muted-foreground mb-2">Update driver and delivery details</p>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="driver_name">Driver Name</Label>

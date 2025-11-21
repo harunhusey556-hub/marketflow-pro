@@ -9,6 +9,8 @@ import OrdersManagement from "@/components/admin/OrdersManagement";
 import DeliveriesManagement from "@/components/admin/DeliveriesManagement";
 import InvoicesManagement from "@/components/admin/InvoicesManagement";
 import StatsOverview from "@/components/admin/StatsOverview";
+import CustomersManagement from "@/components/admin/CustomersManagement";
+import ProductsManagement from "@/components/admin/ProductsManagement";
 
 const Admin = () => {
   const navigate = useNavigate();
@@ -100,13 +102,21 @@ const Admin = () => {
         <StatsOverview />
         
         <Tabs defaultValue="orders" className="mt-8">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-5">
             <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="products">Products</TabsTrigger>
+            <TabsTrigger value="customers">Customers</TabsTrigger>
             <TabsTrigger value="deliveries">Deliveries</TabsTrigger>
             <TabsTrigger value="invoices">Invoices</TabsTrigger>
           </TabsList>
           <TabsContent value="orders" className="mt-6">
             <OrdersManagement />
+          </TabsContent>
+          <TabsContent value="products" className="mt-6">
+            <ProductsManagement />
+          </TabsContent>
+          <TabsContent value="customers" className="mt-6">
+            <CustomersManagement />
           </TabsContent>
           <TabsContent value="deliveries" className="mt-6">
             <DeliveriesManagement />

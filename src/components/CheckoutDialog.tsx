@@ -164,6 +164,7 @@ const CheckoutDialog = ({ open, onOpenChange }: CheckoutDialogProps) => {
         <DialogHeader>
           <DialogTitle>Checkout</DialogTitle>
         </DialogHeader>
+        <p className="text-sm text-muted-foreground mb-4">Complete your order by providing delivery details</p>
         <form onSubmit={handleCheckout} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="address">Delivery Address</Label>

@@ -10,6 +10,10 @@ const categories = [
   { name: "All", icon: null },
   { name: "Poultry", icon: Beef },
   { name: "Meat", icon: Beef },
+  { name: "Dairy", icon: Beef },
+  { name: "Bakery", icon: Beef },
+  { name: "Vegetables", icon: Beef },
+  { name: "Fruits", icon: Beef },
 ];
 
 const Categories = ({ selectedCategory, onSelectCategory }: CategoriesProps) => {

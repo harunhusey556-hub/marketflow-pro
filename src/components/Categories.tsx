@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { Apple, Beef, Milk, Carrot, Coffee, Cookie } from "lucide-react";
+import { Beef } from "lucide-react";
 
 interface CategoriesProps {
   selectedCategory: string;

@@ -3,6 +3,7 @@ import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Plus } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
+import { useNavigate } from "react-router-dom";
 
 interface ProductCardProps {
   id: string;
@@ -15,13 +16,22 @@ interface ProductCardProps {
 
 const ProductCard = ({ id, name, price, image, category, unit = "unit" }: ProductCardProps) => {
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
-  const handleAddToCart = () => {
+  const handleAddToCart = (e: React.MouseEvent) => {
+    e.stopPropagation();
     addToCart({ id, name, price, image, category });
   };
 
+  const handleCardClick = () => {
+    navigate(`/product/${id}`);
+  };
+
   return (
-    <Card className="group overflow-hidden transition-all duration-300 hover:shadow-lg">
+    <Card 
+      className="group overflow-hidden transition-all duration-300 hover:shadow-lg cursor-pointer"
+      onClick={handleCardClick}
+    >
       <div className="relative overflow-hidden aspect-square">
         <img
           src={image}

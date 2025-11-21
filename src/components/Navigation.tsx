@@ -1,12 +1,57 @@
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Menu } from "lucide-react";
+import { ShoppingCart, Menu, LogOut, Shield } from "lucide-react";
 import { useCart } from "@/contexts/CartContext";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import Cart from "./Cart";
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { useNavigate } from "react-router-dom";
+import { Session } from "@supabase/supabase-js";
 
 const Navigation = () => {
   const { getTotalItems } = useCart();
   const totalItems = getTotalItems();
+  const navigate = useNavigate();
+  const [session, setSession] = useState<Session | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        if (session) {
+          checkAdminStatus(session.user.id);
+        } else {
+          setIsAdmin(false);
+        }
+      }
+    );
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      if (session) {
+        checkAdminStatus(session.user.id);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const checkAdminStatus = async (userId: string) => {
+    const { data } = await supabase
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .eq("role", "admin")
+      .maybeSingle();
+    
+    setIsAdmin(!!data);
+  };
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -30,6 +75,30 @@ const Navigation = () => {
         </div>
 
         <div className="flex items-center gap-4">
+          {session ? (
+            <>
+              {isAdmin && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate("/admin")}
+                  className="hidden md:flex items-center gap-2"
+                >
+                  <Shield className="h-4 w-4" />
+                  Admin
+                </Button>
+              )}
+              <Button variant="ghost" size="sm" onClick={handleSignOut} className="hidden md:flex">
+                <LogOut className="mr-2 h-4 w-4" />
+                Sign Out
+              </Button>
+            </>
+          ) : (
+            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")} className="hidden md:flex">
+              Sign In
+            </Button>
+          )}
+
           <Sheet>
             <SheetTrigger asChild>
               <Button variant="outline" size="icon" className="relative">
@@ -66,6 +135,28 @@ const Navigation = () => {
                 <a href="#contact" className="text-lg font-medium transition-colors hover:text-primary">
                   Contact
                 </a>
+                {session ? (
+                  <>
+                    {isAdmin && (
+                      <Button
+                        variant="ghost"
+                        onClick={() => navigate("/admin")}
+                        className="justify-start"
+                      >
+                        <Shield className="mr-2 h-4 w-4" />
+                        Admin Panel
+                      </Button>
+                    )}
+                    <Button variant="ghost" onClick={handleSignOut} className="justify-start">
+                      <LogOut className="mr-2 h-4 w-4" />
+                      Sign Out
+                    </Button>
+                  </>
+                ) : (
+                  <Button variant="ghost" onClick={() => navigate("/auth")} className="justify-start">
+                    Sign In
+                  </Button>
+                )}
               </div>
             </SheetContent>
           </Sheet>

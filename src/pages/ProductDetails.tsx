@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
 import { ArrowLeft, Plus, Star, ChefHat, Info, MessageSquare } from "lucide-react";
 import { toast } from "sonner";
+import RelatedProducts from "@/components/RelatedProducts";
 
 interface Product {
   id: string;
@@ -376,6 +377,7 @@ const ProductDetails = () => {
           </TabsContent>
         </Tabs>
       </div>
+      <RelatedProducts category={product.category} currentProductId={product.id} />
     </div>
   );
 };

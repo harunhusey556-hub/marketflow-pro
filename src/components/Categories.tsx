@@ -18,12 +18,12 @@ const categories = [
 
 const Categories = ({ selectedCategory, onSelectCategory }: CategoriesProps) => {
   return (
-    <div className="flex gap-3 overflow-x-auto pb-4 scrollbar-hide">
+    <div className="flex gap-3 overflow-x-auto pb-4 hide-scrollbar">
       {categories.map(({ name, icon: Icon }) => (
         <Button
           key={name}
           variant={selectedCategory === name ? "default" : "outline"}
-          className="flex-shrink-0 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 animate-fade-in"
+          className="flex-shrink-0 transition-all duration-300 hover:scale-105 hover:-translate-y-0.5 animate-fade-in group"
           onClick={() => onSelectCategory(name)}
         >
           {Icon && <Icon className="mr-2 h-4 w-4 transition-transform duration-300 group-hover:rotate-12" />}

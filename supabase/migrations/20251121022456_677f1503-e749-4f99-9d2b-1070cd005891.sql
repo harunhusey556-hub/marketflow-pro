@@ -235,6 +235,8 @@ CREATE TRIGGER on_auth_user_created
 CREATE OR REPLACE FUNCTION public.generate_order_number()
 RETURNS TEXT
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   new_number TEXT;
@@ -252,6 +254,8 @@ $$;
 CREATE OR REPLACE FUNCTION public.generate_invoice_number()
 RETURNS TEXT
 LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 AS $$
 DECLARE
   new_number TEXT;

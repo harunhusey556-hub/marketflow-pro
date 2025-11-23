@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { LogOut, ArrowLeft } from "lucide-react";
@@ -11,55 +10,32 @@ import InvoicesManagement from "@/components/admin/InvoicesManagement";
 import StatsOverview from "@/components/admin/StatsOverview";
 import CustomersManagement from "@/components/admin/CustomersManagement";
 import ProductsManagement from "@/components/admin/ProductsManagement";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Admin = () => {
   const navigate = useNavigate();
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { user, isAdmin, signOut } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    checkAdminAccess();
-  }, []);
-
-  const checkAdminAccess = async () => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      const { data: roles, error } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .maybeSingle();
-
-      if (error) throw error;
-
-      if (!roles) {
-        toast({
-          title: "Access Denied",
-          description: "You don't have admin privileges",
-          variant: "destructive",
-        });
-        navigate("/");
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Error checking admin access:", error);
-      navigate("/");
-    } finally {
-      setIsLoading(false);
+    if (user === null) {
+      navigate("/auth");
+      return;
     }
-  };
+    if (!isAdmin) {
+      toast({
+        title: "Access Denied",
+        description: "You don't have admin privileges",
+        variant: "destructive",
+      });
+      navigate("/");
+      return;
+    }
+    setIsLoading(false);
+  }, [isAdmin, navigate, user]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
+    await signOut();
     navigate("/");
   };
 

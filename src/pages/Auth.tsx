@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -8,7 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
 import { z } from "zod";
-import { Session } from "@supabase/supabase-js";
+import { useAuth } from "@/contexts/AuthContext";
 
 const authSchema = z.object({
   email: z.string().trim().email({ message: "Invalid email address" }),
@@ -18,7 +17,7 @@ const authSchema = z.object({
 
 const Auth = () => {
   const navigate = useNavigate();
-  const [session, setSession] = useState<Session | null>(null);
+  const { user, signIn, signUp } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     email: "",
@@ -27,24 +26,10 @@ const Auth = () => {
   });
 
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        if (session) {
-          navigate("/");
-        }
-      }
-    );
-
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      if (session) {
-        navigate("/");
-      }
-    });
-
-    return () => subscription.unsubscribe();
-  }, [navigate]);
+    if (user) {
+      navigate("/");
+    }
+  }, [navigate, user]);
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,20 +37,11 @@ const Auth = () => {
 
     try {
       const validated = authSchema.parse(formData);
-      const redirectUrl = `${window.location.origin}/`;
-
-      const { error } = await supabase.auth.signUp({
+      await signUp({
         email: validated.email,
         password: validated.password,
-        options: {
-          emailRedirectTo: redirectUrl,
-          data: {
-            full_name: formData.fullName,
-          },
-        },
+        fullName: validated.fullName ?? formData.fullName,
       });
-
-      if (error) throw error;
 
       toast({
         title: "Account created!",
@@ -103,12 +79,7 @@ const Auth = () => {
     try {
       const validated = authSchema.omit({ fullName: true }).parse(formData);
 
-      const { error } = await supabase.auth.signInWithPassword({
-        email: validated.email,
-        password: validated.password,
-      });
-
-      if (error) throw error;
+      await signIn(validated.email, validated.password);
 
       toast({
         title: "Welcome back!",

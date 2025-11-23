@@ -1,84 +1,51 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Search, Mail, Phone, MapPin } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import { getAllUsers } from "@/services/localAuth";
+import { getCustomerSummaries } from "@/services/localData";
 
-interface Customer {
+interface CustomerSummary {
   id: string;
-  full_name: string;
+  fullName: string;
   email: string;
-  phone: string | null;
-  address: string | null;
-  city: string | null;
-  postal_code: string | null;
-  created_at: string;
-}
-
-interface CustomerStats {
   totalOrders: number;
   totalSpent: number;
 }
 
 const CustomersManagement = () => {
-  const [customers, setCustomers] = useState<Customer[]>([]);
-  const [customerStats, setCustomerStats] = useState<Record<string, CustomerStats>>({});
+  const { t } = useTranslation();
+  const [customers, setCustomers] = useState<CustomerSummary[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetchCustomers();
+    const users = getAllUsers();
+    getCustomerSummaries(users).then((summaries) =>
+      setCustomers(
+        summaries.map((summary) => ({
+          id: summary.id,
+          fullName: summary.fullName,
+          email: summary.email,
+          totalOrders: summary.totalOrders,
+          totalSpent: summary.totalSpent,
+        })),
+      ),
+    );
   }, []);
 
-  const fetchCustomers = async () => {
-    const { data, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching customers:", error);
-      return;
-    }
-
-    setCustomers(data || []);
-    
-    // Fetch order stats for each customer
-    if (data) {
-      const statsPromises = data.map(async (customer) => {
-        const { data: orders } = await supabase
-          .from("orders")
-          .select("total_amount")
-          .eq("user_id", customer.id);
-
-        return {
-          customerId: customer.id,
-          stats: {
-            totalOrders: orders?.length || 0,
-            totalSpent: orders?.reduce((sum, order) => sum + Number(order.total_amount), 0) || 0,
-          },
-        };
-      });
-
-      const results = await Promise.all(statsPromises);
-      const statsMap: Record<string, CustomerStats> = {};
-      results.forEach((result) => {
-        statsMap[result.customerId] = result.stats;
-      });
-      setCustomerStats(statsMap);
-    }
-  };
-
-  const filteredCustomers = customers.filter((customer) =>
-    customer.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCustomers = customers.filter(
+    (customer) =>
+      customer.fullName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      customer.email.toLowerCase().includes(searchQuery.toLowerCase()),
   );
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Customer Management</CardTitle>
+        <CardTitle>{t("admin.customers")}</CardTitle>
         <div className="relative mt-4">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -91,63 +58,44 @@ const CustomersManagement = () => {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {filteredCustomers.map((customer) => {
-            const stats = customerStats[customer.id];
-            return (
-              <div
-                key={customer.id}
-                className="p-4 border rounded-lg hover:bg-accent/50 transition-colors"
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div className="flex-1 space-y-2">
-                    <div className="flex items-center gap-3">
-                      <h3 className="font-semibold text-lg">{customer.full_name || "No name"}</h3>
-                      <Badge variant="outline">
-                        {stats?.totalOrders || 0} orders
-                      </Badge>
-                    </div>
-                    <div className="flex flex-col gap-1 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4" />
-                        <span>{customer.email}</span>
-                      </div>
-                      {customer.phone && (
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4" />
-                          <span>{customer.phone}</span>
-                        </div>
-                      )}
-                      {customer.address && (
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>
-                            {customer.address}, {customer.city} {customer.postal_code}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                    {stats && (
-                      <div className="text-sm">
-                        <span className="font-semibold">Total Spent: </span>
-                        <span className="text-primary font-bold">${stats.totalSpent.toFixed(2)}</span>
-                      </div>
-                    )}
-                    <p className="text-xs text-muted-foreground">
-                      Member since {new Date(customer.created_at).toLocaleDateString()}
-                    </p>
+          {filteredCustomers.map((customer) => (
+            <div key={customer.id} className="p-4 border rounded-lg hover:bg-accent/50 transition-colors">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <h3 className="font-semibold text-lg">{customer.fullName}</h3>
+                    <Badge variant="outline">{customer.totalOrders} orders</Badge>
                   </div>
-                  <div className="flex flex-col gap-2">
-                    <Button variant="outline" size="sm">
-                      View Orders
-                    </Button>
-                    <Button variant="outline" size="sm">
-                      Contact
-                    </Button>
+                  <div className="flex flex-col gap-1 text-sm text-muted-foreground">
+                    <div className="flex items-center gap-2">
+                      <Mail className="h-4 w-4" />
+                      <span>{customer.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-4 w-4" />
+                      <span>+358 400 000 000</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPin className="h-4 w-4" />
+                      <span>Helsinki, Finland</span>
+                    </div>
+                  </div>
+                  <div className="text-sm">
+                    <span className="font-semibold">Total Spent: </span>
+                    <span className="text-primary font-bold">€{customer.totalSpent.toFixed(2)}</span>
                   </div>
                 </div>
+                <div className="flex flex-col gap-2">
+                  <Button variant="outline" size="sm">
+                    View Orders
+                  </Button>
+                  <Button variant="outline" size="sm">
+                    Contact
+                  </Button>
+                </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
           {filteredCustomers.length === 0 && (
             <p className="text-center text-muted-foreground py-8">
               {searchQuery ? "No customers found matching your search" : "No customers yet"}

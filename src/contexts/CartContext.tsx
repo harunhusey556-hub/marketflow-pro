@@ -1,14 +1,8 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { toast } from '@/hooks/use-toast';
+import { mockDb, CartItem as StoredCartItem } from '@/services/mockDb';
 
-export interface CartItem {
-  id: string;
-  name: string;
-  price: number;
-  quantity: number;
-  image: string;
-  category: string;
-}
+export type CartItem = StoredCartItem;
 
 interface CartContextType {
   cart: CartItem[];
@@ -23,10 +17,21 @@ interface CartContextType {
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
 export const CartProvider = ({ children }: { children: ReactNode }) => {
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>(() => mockDb.getCartSnapshot());
+
+  useEffect(() => {
+    mockDb.saveCart(cart);
+  }, [cart]);
+
+  const syncCart = (updater: (items: CartItem[]) => CartItem[]) => {
+    setCart((previous) => {
+      const updated = updater(previous);
+      return updated;
+    });
+  };
 
   const addToCart = (item: Omit<CartItem, 'quantity'>) => {
-    setCart((prev) => {
+    syncCart((prev) => {
       const existingItem = prev.find((i) => i.id === item.id);
       if (existingItem) {
         // Use setTimeout to avoid setState during render
@@ -60,7 +65,7 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
         });
       }, 0);
     }
-    setCart((prev) => prev.filter((item) => item.id !== id));
+    syncCart((prev) => prev.filter((item) => item.id !== id));
   };
 
   const updateQuantity = (id: string, quantity: number) => {
@@ -68,13 +73,13 @@ export const CartProvider = ({ children }: { children: ReactNode }) => {
       removeFromCart(id);
       return;
     }
-    setCart((prev) =>
+    syncCart((prev) =>
       prev.map((item) => (item.id === id ? { ...item, quantity } : item))
     );
   };
 
   const clearCart = () => {
-    setCart([]);
+    syncCart(() => []);
     setTimeout(() => {
       toast({
         title: "Cart Cleared",

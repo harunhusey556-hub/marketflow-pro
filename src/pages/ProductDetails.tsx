@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/contexts/CartContext";
-import { ArrowLeft, Plus, Star, ChefHat, Info, MessageSquare } from "lucide-react";
+import { ArrowLeft, Plus, Star, ChefHat, Info, MessageSquare, Heart } from "lucide-react";
 import { toast } from "sonner";
+import { getProductImage } from "@/lib/utils";
+import { localData } from "@/services/localData";
+import { useWishlist } from "@/hooks/useWishlist";
 
 interface Product {
   id: string;
@@ -32,6 +34,7 @@ const ProductDetails = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useWishlist();
   const [product, setProduct] = useState<Product | null>(null);
   const [loading, setLoading] = useState(true);
   const [reviews] = useState<Review[]>([
@@ -58,19 +61,7 @@ const ProductDetails = () => {
   const fetchProduct = async () => {
     if (!id) return;
 
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("id", id)
-      .maybeSingle();
-
-    if (error) {
-      console.error("Error fetching product:", error);
-      toast.error("Failed to load product");
-      navigate("/");
-      return;
-    }
-
+    const data = await localData.getProductById(id);
     if (!data) {
       toast.error("Product not found");
       navigate("/");
@@ -87,9 +78,16 @@ const ProductDetails = () => {
       id: product.id,
       name: product.name,
       price: product.price,
-      image: product.image_url,
+      image: getProductImage(product),
       category: product.category,
     });
+  };
+
+  const handleToggleWishlist = () => {
+    if (!product) return;
+    const wasFavorite = isFavorite(product.id);
+    toggleFavorite(product.id);
+    toast.success(wasFavorite ? "Removed from wishlist" : "Added to wishlist");
   };
 
   const getNutritionalInfo = (productName: string) => {
@@ -208,11 +206,14 @@ const ProductDetails = () => {
         <div className="grid md:grid-cols-2 gap-8 mb-8">
           {/* Product Image */}
           <div className="relative aspect-square rounded-lg overflow-hidden bg-background">
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="w-full h-full object-cover"
-            />
+            {(() => {
+              const img = getProductImage(product);
+              return img ? (
+                <img src={img} alt={product.name} className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">No image</div>
+              );
+            })()}
             <Badge className="absolute top-4 right-4 text-lg px-4 py-2">
               {product.category}
             </Badge>
@@ -257,14 +258,21 @@ const ProductDetails = () => {
               )}
             </div>
 
-            <Button
-              size="lg"
-              className="w-full text-lg py-6"
-              onClick={handleAddToCart}
-            >
-              <Plus className="mr-2 h-5 w-5" />
-              Add to Cart
-            </Button>
+            <div className="grid grid-cols-1 gap-3">
+              <Button size="lg" className="w-full text-lg py-6" onClick={handleAddToCart}>
+                <Plus className="mr-2 h-5 w-5" />
+                Add to Cart
+              </Button>
+              <Button
+                variant="outline"
+                size="lg"
+                className="w-full text-lg py-6"
+                onClick={handleToggleWishlist}
+              >
+                <Heart className={`mr-2 h-5 w-5 ${isFavorite(product.id) ? "fill-primary text-primary" : ""}`} />
+                {isFavorite(product.id) ? "Remove from Wishlist" : "Save to Wishlist"}
+              </Button>
+            </div>
           </div>
         </div>
 

@@ -3,7 +3,8 @@ import ProductCard from "./ProductCard";
 import Categories from "./Categories";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { getProductImage } from "@/lib/utils";
+import { localData } from "@/services/localData";
 
 interface Product {
   id: string;
@@ -20,34 +21,23 @@ const ProductGrid = () => {
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetchProducts();
-
-    const channel = supabase
-      .channel('products-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, () => {
-        fetchProducts();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
+    const load = async () => {
+      const data = await localData.getProducts();
+      setProducts(
+        data
+          .filter((product) => product.isActive !== false)
+          .map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            category: product.category,
+            image_url: product.image_url ?? product.image,
+            unit: product.unit,
+          })),
+      );
     };
+    load();
   }, []);
-
-  const fetchProducts = async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("id, name, category, price, unit, image_url")
-      .eq("is_active", true)
-      .order("name");
-
-    if (error) {
-      console.error("Error fetching products:", error);
-      return;
-    }
-
-    setProducts(data || []);
-  };
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -93,7 +83,7 @@ const ProductGrid = () => {
               name={product.name}
               price={product.price}
               category={product.category}
-              image={product.image_url}
+              image={getProductImage(product)}
               unit={product.unit}
             />
           ))}

@@ -9,6 +9,9 @@ import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import Admin from "./pages/Admin";
 import ProductDetails from "./pages/ProductDetails";
+import Profile from "@/pages/Profile";
+import Wishlist from "@/pages/Wishlist";
+import Checkout from "./pages/Checkout"; // <-- added
 
 const queryClient = new QueryClient();
 
@@ -23,8 +26,11 @@ const App = () => (
             <Route path="/" element={<Index />} />
             <Route path="/auth" element={<Auth />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/profile" element={<Profile />} /> {/* <-- BU SATIRI EKLEYİN */}
+            <Route path="/wishlist" element={<Wishlist />} /> {/* <-- BUNU DA EKLEYİN */}
+            <Route path="/checkout" element={<Checkout />} /> {/* checkout route */}
             <Route path="/product/:id" element={<ProductDetails />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            {/* CATCH-ALL ROUTE EN SONDA OLMALI */}
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

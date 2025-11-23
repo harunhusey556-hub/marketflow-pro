@@ -1,0 +1,126 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  DRIVER
+}
+
+enum OrderStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  ASSIGNED
+  PICKING
+  DELIVERING
+  DELIVERED
+  CANCELLED
+  INVOICED
+}
+
+enum AssignmentStatus {
+  ASSIGNED
+  ACCEPTED
+  COMPLETED
+}
+
+enum InvoiceStatus {
+  PENDING
+  SENT
+  FAILED
+}
+
+model User {
+  id            String               @id @default(cuid())
+  email         String               @unique
+  passwordHash  String
+  role          UserRole
+  createdAt     DateTime             @default(now())
+  updatedAt     DateTime             @updatedAt
+  orders        Order[]              @relation("CustomerOrders")
+  driverJobs    DriverAssignment[]   @relation("DriverAssignments")
+  adjustments   OrderItemAdjustment[] @relation("AdjustmentCreator")
+}
+
+model Product {
+  id        String    @id @default(cuid())
+  name      String
+  sku       String    @unique
+  price     Decimal   @db.Decimal(10, 2)
+  unit      String
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  orderItems OrderItem[]
+}
+
+model Order {
+  id                String           @id @default(cuid())
+  customerId        String
+  customer          User             @relation("CustomerOrders", fields: [customerId], references: [id])
+  status            OrderStatus      @default(PENDING)
+  totalAmount       Decimal          @db.Decimal(12, 2) @default(0)
+  deliveryAddress   String
+  deliveryTimeWindow String?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  items             OrderItem[]
+  assignment        DriverAssignment?
+  invoice           Invoice?
+}
+
+model OrderItem {
+  id           String    @id @default(cuid())
+  orderId      String
+  order        Order     @relation(fields: [orderId], references: [id])
+  productId    String
+  product      Product   @relation(fields: [productId], references: [id])
+  orderedQty   Int
+  deliveredQty Int?
+  unitPrice    Decimal   @db.Decimal(10, 2)
+  discount     Decimal   @db.Decimal(5, 2) @default(0)
+  lineTotal    Decimal   @db.Decimal(12, 2) @default(0)
+  adjustments  OrderItemAdjustment[]
+}
+
+model DriverAssignment {
+  id          String          @id @default(cuid())
+  orderId     String          @unique
+  order       Order           @relation(fields: [orderId], references: [id])
+  driverId    String
+  driver      User            @relation("DriverAssignments", fields: [driverId], references: [id])
+  status      AssignmentStatus @default(ASSIGNED)
+  assignedAt  DateTime        @default(now())
+  acceptedAt  DateTime?
+  completedAt DateTime?
+}
+
+model OrderItemAdjustment {
+  id                String   @id @default(cuid())
+  orderItemId       String
+  orderItem         OrderItem @relation(fields: [orderItemId], references: [id])
+  oldQty            Int
+  newQty            Int
+  reason            String?
+  createdByDriverId String
+  createdByDriver   User     @relation("AdjustmentCreator", fields: [createdByDriverId], references: [id])
+  createdAt         DateTime @default(now())
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  orderId         String        @unique
+  order           Order         @relation(fields: [orderId], references: [id])
+  externalId      String?
+  status          InvoiceStatus @default(PENDING)
+  payloadSnapshot Json?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}

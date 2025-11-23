@@ -1,31 +1,34 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Truck } from "lucide-react";
+import { getDeliveries, localData } from "@/services/localData";
 
-interface Delivery {
+interface DeliveryRow {
   id: string;
-  order_id: string;
-  driver_name: string | null;
-  driver_phone: string | null;
+  orderNumber: string;
   status: string;
-  estimated_delivery: string | null;
-  orders: {
-    order_number: string;
-    delivery_address: string;
+  deliveryAddress: string;
+  driver?: {
+    name: string;
+    phone: string;
+    status: string;
   };
+  estimatedDelivery?: string;
+  trackingNotes?: string;
 }
 
+const statuses = ["pending", "confirmed", "preparing", "out_for_delivery", "delivering", "delivered", "cancelled"];
+
 const DeliveriesManagement = () => {
-  const [deliveries, setDeliveries] = useState<Delivery[]>([]);
-  const [selectedDelivery, setSelectedDelivery] = useState<Delivery | null>(null);
+  const [deliveries, setDeliveries] = useState<DeliveryRow[]>([]);
+  const [selectedDelivery, setSelectedDelivery] = useState<DeliveryRow | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     driver_name: "",
@@ -36,103 +39,45 @@ const DeliveriesManagement = () => {
 
   useEffect(() => {
     fetchDeliveries();
-
-    const channel = supabase
-      .channel('deliveries-changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'deliveries' }, () => {
-        fetchDeliveries();
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, []);
 
   const fetchDeliveries = async () => {
-    const { data, error } = await supabase
-      .from("deliveries")
-      .select(`
-        *,
-        orders!deliveries_order_id_fkey (order_number, delivery_address)
-      `)
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      console.error("Error fetching deliveries:", error);
-      return;
-    }
-
-    setDeliveries(data || []);
+    const data = await getDeliveries();
+    setDeliveries(data);
   };
 
-  const updateDeliveryStatus = async (deliveryId: string, newStatus: string) => {
-    const updateData: any = { status: newStatus };
-    
-    if (newStatus === "delivered") {
-      updateData.actual_delivery = new Date().toISOString();
-    }
-
-    const { error } = await supabase
-      .from("deliveries")
-      .update(updateData)
-      .eq("id", deliveryId);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update delivery status",
-        variant: "destructive",
-      });
-      return;
-    }
-
+  const updateDeliveryStatus = async (orderId: string, newStatus: string) => {
+    await localData.updateOrderStatus(orderId, newStatus as any);
     toast({
       title: "Success",
       description: "Delivery status updated",
     });
-    
     fetchDeliveries();
   };
 
   const updateDeliveryInfo = async () => {
     if (!selectedDelivery) return;
-
-    const { error } = await supabase
-      .from("deliveries")
-      .update({
-        driver_name: formData.driver_name,
-        driver_phone: formData.driver_phone,
-        estimated_delivery: formData.estimated_delivery,
-        tracking_notes: formData.tracking_notes,
-      })
-      .eq("id", selectedDelivery.id);
-
-    if (error) {
-      toast({
-        title: "Error",
-        description: "Failed to update delivery information",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    await localData.updateDeliveryDetails(selectedDelivery.id, {
+      driverName: formData.driver_name,
+      driverPhone: formData.driver_phone,
+      estimatedDelivery: formData.estimated_delivery,
+      trackingNotes: formData.tracking_notes,
+    });
     toast({
       title: "Success",
       description: "Delivery information updated",
     });
-    
     setIsDialogOpen(false);
     fetchDeliveries();
   };
 
-  const openEditDialog = (delivery: Delivery) => {
+  const openEditDialog = (delivery: DeliveryRow) => {
     setSelectedDelivery(delivery);
     setFormData({
-      driver_name: delivery.driver_name || "",
-      driver_phone: delivery.driver_phone || "",
-      estimated_delivery: delivery.estimated_delivery || "",
-      tracking_notes: "",
+      driver_name: delivery.driver?.name ?? "",
+      driver_phone: delivery.driver?.phone ?? "",
+      estimated_delivery: delivery.estimatedDelivery ?? "",
+      tracking_notes: delivery.trackingNotes ?? "",
     });
     setIsDialogOpen(true);
   };
@@ -140,11 +85,12 @@ const DeliveriesManagement = () => {
   const getStatusColor = (status: string) => {
     const colors: Record<string, string> = {
       pending: "bg-yellow-500",
-      assigned: "bg-blue-500",
-      picked_up: "bg-purple-500",
-      in_transit: "bg-orange-500",
+      confirmed: "bg-blue-500",
+      preparing: "bg-purple-500",
+      out_for_delivery: "bg-orange-500",
+      delivering: "bg-orange-600",
       delivered: "bg-green-500",
-      failed: "bg-red-500",
+      cancelled: "bg-red-500",
     };
     return colors[status] || "bg-gray-500";
   };
@@ -165,55 +111,42 @@ const DeliveriesManagement = () => {
                 <div className="flex-1 space-y-2">
                   <div className="flex items-center gap-3">
                     <Truck className="h-5 w-5 text-muted-foreground" />
-                    <span className="font-semibold">{delivery.orders.order_number}</span>
-                    <Badge className={getStatusColor(delivery.status)}>
-                      {delivery.status.replace("_", " ")}
-                    </Badge>
+                    <span className="font-semibold">{delivery.orderNumber}</span>
+                    <Badge className={getStatusColor(delivery.status)}>{delivery.status.replace(/_/g, " ")}</Badge>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    Address: {delivery.orders.delivery_address}
-                  </p>
-                  {delivery.driver_name && (
+                  <p className="text-sm text-muted-foreground">Address: {delivery.deliveryAddress}</p>
+                  {delivery.driver && (
                     <p className="text-sm">
-                      Driver: {delivery.driver_name} ({delivery.driver_phone})
+                      Driver: {delivery.driver.name} ({delivery.driver.phone})
                     </p>
                   )}
-                  {delivery.estimated_delivery && (
+                  {delivery.estimatedDelivery && (
                     <p className="text-sm text-muted-foreground">
-                      Est. Delivery: {new Date(delivery.estimated_delivery).toLocaleString()}
+                      Est. Delivery: {new Date(delivery.estimatedDelivery).toLocaleString()}
                     </p>
                   )}
+                  {delivery.trackingNotes && <p className="text-sm text-muted-foreground">{delivery.trackingNotes}</p>}
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Select
-                    value={delivery.status}
-                    onValueChange={(value) => updateDeliveryStatus(delivery.id, value)}
-                  >
-                    <SelectTrigger className="w-full md:w-[180px]">
+                  <Select value={delivery.status} onValueChange={(value) => updateDeliveryStatus(delivery.id, value)}>
+                    <SelectTrigger className="w-full md:w-[220px]">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="assigned">Assigned</SelectItem>
-                      <SelectItem value="picked_up">Picked Up</SelectItem>
-                      <SelectItem value="in_transit">In Transit</SelectItem>
-                      <SelectItem value="delivered">Delivered</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
+                      {statuses.map((status) => (
+                        <SelectItem key={status} value={status}>
+                          {status.replace(/_/g, " ")}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openEditDialog(delivery)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => openEditDialog(delivery)}>
                     Edit Details
                   </Button>
                 </div>
               </div>
             ))}
-            {deliveries.length === 0 && (
-              <p className="text-center text-muted-foreground py-8">No deliveries yet</p>
-            )}
+            {deliveries.length === 0 && <p className="text-center text-muted-foreground py-8">No deliveries yet</p>}
           </div>
         </CardContent>
       </Card>
